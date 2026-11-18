@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node
+node_modules/
+.next/
+out/
+
+# 환경·비밀
+.env
+.env.*
+!.env.example
+
+# 로컬 미디어·작업 산출물
+storage/
+*.mp4
+*.wav
+*.jpg
+!frontend/public/**/*.jpg
+
+# 기획서 원본(HWP)에는 참가신청서 개인정보가 있으므로 저장소에 올리지 않는다
+*.hwp
+next-env.d.ts
