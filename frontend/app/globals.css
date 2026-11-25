@@ -22,21 +22,22 @@ input, select, textarea { font-size: 16px; padding: 8px; border-radius: 8px; bor
 label { display: block; margin: 10px 0 4px; }
 
 /* 근로자 화면: 한 화면 한 단계, 큰 글씨·큰 단추, 구조 고정 */
-.worker { max-width: 480px; min-height: 100dvh; display: flex; flex-direction: column; gap: 12px; }
+/* 화면 높이를 고정하고 가운데 단계 영역만 스크롤 → 사진·영상을 열어도 도움 단추가 화면 밖으로 밀려나지 않는다 */
+.worker { max-width: 480px; height: 100dvh; display: flex; flex-direction: column; gap: 12px; padding-bottom: 0; }
 .worker .title { font-size: 26px; }
 .worker .big { font-size: 26px; line-height: 1.5; font-weight: 600; margin: 8px 0; word-break: keep-all; }
-.worker .stack { display: flex; flex-direction: column; gap: 12px; }
+.worker .stack { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 .worker .choice { font-size: 22px; padding: 20px; text-align: left; }
 .worker .progress { display: flex; justify-content: space-between; color: var(--muted); font-size: 16px; }
-.worker .step { flex: 1; border: 2px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.worker .media { width: 100%; border-radius: 12px; background: #000; max-height: 40dvh; object-fit: contain; }
+.worker .step { flex: 1; min-height: 0; overflow-y: auto; border: 2px solid var(--border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.worker .media { width: 100%; border-radius: 12px; background: #000; max-height: 30dvh; object-fit: contain; flex-shrink: 0; }
 .worker .caution { color: var(--warn); font-size: 20px; font-weight: 600; margin: 0; }
 .worker .listen { align-self: flex-start; background: transparent; color: var(--accent); }
-.worker .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.worker .help-grid { flex-shrink: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .worker .help-grid button { font-size: 20px; padding: 18px 8px; background: var(--bg); color: var(--fg); border: 2px solid var(--accent); }
 .worker .help-grid button.call { border-color: var(--warn); color: var(--warn); }
 .worker .help-grid button:disabled { opacity: 0.35; }
-.worker .nav { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-bottom: 16px; }
+.worker .nav { flex-shrink: 0; display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-bottom: 16px; }
 .worker .nav button { font-size: 20px; padding: 16px; background: var(--bg); color: var(--fg); border: 2px solid var(--border); }
 .worker .nav button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .worker .nav button:disabled { opacity: 0.35; }
