@@ -9,6 +9,14 @@
 - 환경 `seatsync-worksense`: data.go.kr·apis.data.go.kr·krdict 허용, `GEMINI_API_KEY` 환경 변수, 설정 스크립트(백엔드 venv·프론트 npm ci·pgvector 설치).
 - 실제 Gemini 호출은 아직 한 번도 안 했다. 첫 실행에서 모델 이름·구조화 출력 동작을 확인할 것.
 
+## 2026-11-25 실행 결과
+
+- 영상 받음(403,230,553바이트, 5분 2초). 연결이 끊기면 같은 쿠키로 check-limit 부터 다시 호출하면 된다.
+- `gemini-3.5-transcribe` 는 이 키로 404 → `GEMINI_MODEL_TRANSCRIBE=gemini-3.8-flash` 로 실행 (open-questions #15).
+- 전사 73문장, 업무 4개·단계 7개, 사진·클립 7쌍. `match` 는 jobs.csv 코드가 없어 건너뜀, `KRDICT_KEY` 가 없어 어휘 등급 점검도 건너뜀.
+- 사진·클립은 `data/work/kitchen_helper/media/` (git 제외) 에만 있다. 새 세션은 영상부터 다시 받아 `--from assets` 로 다시 만들어야 한다.
+- 관찰: `easy_text` 가 원문 어미만 바꾼 수준. `easier_text` 는 쉬워졌다. 단계 7개는 영상 길이(작업 장면 약 1분 15초)에 비해 적당하나 기준 답과 비교 필요.
+
 ## 이어서 할 일
 
 1. 키 확인: `test -n "$GEMINI_API_KEY"` (값은 출력하지 않는다)
