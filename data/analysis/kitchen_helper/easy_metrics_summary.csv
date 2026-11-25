@@ -1,0 +1,4 @@
+﻿kind,n,chars,sentences,chars_per_sentence,verbs_per_sentence,hard_ratio,hard_ratio_nonterm
+source,7,25.86,1.0,25.86,2.29,0.45,0.3
+easy,7,23.57,1.0,23.57,2.0,0.34,0.1
+easier,7,27.57,2.0,13.79,1.36,0.34,0.12
