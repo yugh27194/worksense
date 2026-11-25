@@ -120,4 +120,4 @@ DB 통합 테스트까지 돌리려면 `TEST_DATABASE_URL=postgresql://worksense
 | 공공데이터 수집기 | ⏳ 클라이언트 완료, 첫 호출로 응답 구조 확인 필요 |
 | 담당자·근로자 화면 | ⏳ 최소 화면, Figma 시안(11/22) 반영 필요 |
 
-미결 사항은 [`docs/open-questions.md`](docs/open-questions.md)에 있습니다.
+미결 사항은 [`docs/open-questions.md`](docs/open-questions.md), 오늘의 진행 방식은 [`docs/workflow.md`](docs/workflow.md)에 있습니다.

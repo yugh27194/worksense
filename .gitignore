@@ -26,3 +26,8 @@ storage/
 # 기획서 원본(HWP)에는 참가신청서 개인정보가 있으므로 저장소에 올리지 않는다
 *.hwp
 next-env.d.ts
+
+# 데이터: 영상 원본과 파이프라인 중간 산출물은 커밋하지 않는다 (API 응답 CSV 는 작으므로 커밋)
+data/raw/media/
+data/work/
+.ipynb_checkpoints/
