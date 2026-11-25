@@ -26,6 +26,7 @@
 - `jobs.csv` 확정: 사용자 결정으로 후보 코드 전부 포함(직종 4개, NCS 2개, `;` 구분). `public_reference` 가 코드별로 묶고 NCS 는 수행준거만 쓴다.
   match 결과 누락 후보 8건(모두 단계에 연결). 코드별 정리는 `docs/data-report.md`.
 - 어휘 등급 점검 실행: '중급' 도 어려운 낱말로 잡혀 7단계 모두 경고. `field_terms.csv`·`vocab_overrides.csv` 정리 필요(데이터 담당 3번 작업).
+- 데이터 담당 작업 초안(사용자 요청): 기준 답 `data/gold/_draft_kitchen_helper.csv`(확인 후 이름 변경), `field_terms.csv` 11개, `vocab_overrides.csv` 19개. 어휘 경고 7단계 → 4단계.
 
 ## 이어서 할 일
 
