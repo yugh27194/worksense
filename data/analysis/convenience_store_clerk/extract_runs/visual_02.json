@@ -1,0 +1,199 @@
+{
+ "variant": "visual",
+ "run": 2,
+ "tasks": [
+  {
+   "task_name": "상품 입고 및 검수",
+   "steps": [
+    {
+     "order": 1,
+     "action": "운반 카트에 상품 상자들을 싣고 매장 안으로 옮긴다.",
+     "tools": [
+      "운반 카트(대차)",
+      "상품 상자"
+     ],
+     "location": "편의점 매장 입구 및 통로",
+     "cautions": [
+      "통로를 지나는 손님이나 주변 진열대에 부딪히지 않도록 주의한다."
+     ],
+     "evidence_start": "03:10",
+     "evidence_end": "03:18",
+     "transcript_quote": "새로운 물건들이 도착했나 봐요. 편의점 스태프의 업무 중 하나는 새로 도착한 상품들을 매장 안으로 옮기는 일이에요.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "바코드 스캐너를 이용해 매입 전표의 바코드를 스캔하고 배송된 상품과 대조하여 수량을 확인한다.",
+     "tools": [
+      "바코드 스캐너(PDA)",
+      "매입 전표",
+      "클립보드"
+     ],
+     "location": "편의점 매장 내부",
+     "cautions": [
+      "전표에 적힌 품목 및 수량과 입고된 상품이 정확히 일치하는지 대조한다."
+     ],
+     "evidence_start": "03:19",
+     "evidence_end": "03:28",
+     "transcript_quote": "매입 전표에 기록된 상품 목록과 배송된 상품을 대조해서 상품 목록과 수량이 일치하는지 확인해 보아요.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  },
+  {
+   "task_name": "상품 진열 및 보충",
+   "steps": [
+    {
+     "order": 1,
+     "action": "진열할 상품 상자를 정리하고 열 준비를 한다.",
+     "tools": [
+      "상품 상자"
+     ],
+     "location": "편의점 매장 내부 바닥",
+     "cautions": [],
+     "evidence_start": "03:29",
+     "evidence_end": "03:31",
+     "transcript_quote": "이번엔 상품들을 정리하는 일이에요.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "라면 진열대의 빈자리에 동일한 컵라면 상품을 채워 넣는다.",
+     "tools": [
+      "컵라면"
+     ],
+     "location": "라면 진열대",
+     "cautions": [
+      "유통기한을 확인하고 손님이 집기 편하도록 전면을 맞추어 진열한다."
+     ],
+     "evidence_start": "03:32",
+     "evidence_end": "03:38",
+     "transcript_quote": "손님들이 물건을 사면 빈자리가 생기죠? 그럼 그 자리를 같은 물건으로 보충해 주고",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 3,
+     "action": "과자류 상품을 종류별로 구분하여 진열대에 정돈해 진열한다.",
+     "tools": [
+      "과자/스낵류"
+     ],
+     "location": "과자 진열대",
+     "cautions": [
+      "동일 종류 및 브랜드별로 모아서 가지런히 진열한다."
+     ],
+     "evidence_start": "03:38",
+     "evidence_end": "03:41",
+     "transcript_quote": "과자는 과자끼리 라면은 라면끼리",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 4,
+     "action": "냉장 보관 상품인 음료수를 음료 냉장고에 구분하여 진열한다.",
+     "tools": [
+      "음료수"
+     ],
+     "location": "음료 냉장고(쇼케이스)",
+     "cautions": [
+      "냉기 손실을 줄이기 위해 신속하게 진열하고 문을 닫는다."
+     ],
+     "evidence_start": "03:42",
+     "evidence_end": "03:44",
+     "transcript_quote": "냉장고에 넣을 상품들과",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 5,
+     "action": "냉동고 문을 열고 냉동식품을 냉동고 안 지정된 자리에 진열한다.",
+     "tools": [
+      "냉동식품(만두)"
+     ],
+     "location": "냉동고",
+     "cautions": [
+      "냉동식품이 해동되지 않도록 신속히 넣고 문을 완전히 닫는다."
+     ],
+     "evidence_start": "03:45",
+     "evidence_end": "03:48",
+     "transcript_quote": "냉동고에 넣을 상품들도 잘 구분해서 진열해야 해요.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  },
+  {
+   "task_name": "매장 청소 및 쓰레기 관리",
+   "steps": [
+    {
+     "order": 1,
+     "action": "빗자루와 쓰레받기를 이용하여 매장 바닥의 이물질을 쓸어 모은다.",
+     "tools": [
+      "빗자루",
+      "쓰레받기"
+     ],
+     "location": "편의점 매장 바닥",
+     "cautions": [
+      "진열대 밑이나 좁은 통로 구석까지 깨끗하게 쓸어 모은다."
+     ],
+     "evidence_start": "03:49",
+     "evidence_end": "03:54",
+     "transcript_quote": "그리고 편의점 매장 안을 늘 깨끗하게 유지해 줘야 해요.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "대걸레를 사용하여 매장 바닥을 닦는다.",
+     "tools": [
+      "대걸레(밀대걸레)"
+     ],
+     "location": "편의점 매장 바닥",
+     "cautions": [
+      "바닥 물기로 인해 고객이 미끄러지지 않도록 유의한다."
+     ],
+     "evidence_start": "03:55",
+     "evidence_end": "03:59",
+     "transcript_quote": "청소도 깨끗이 손걸레로 닦고 대걸레로 바닥을 닦고 빗자루로 쓸고",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 3,
+     "action": "조리대 하부 쓰레기통의 비닐봉투를 꺼내 정리한다.",
+     "tools": [
+      "쓰레기봉투"
+     ],
+     "location": "매장 내 간이 조리대/전자레인지대 하부",
+     "cautions": [
+      "쓰레기가 넘치지 않도록 적정량일 때 묶어 교체한다."
+     ],
+     "evidence_start": "04:00",
+     "evidence_end": "04:02",
+     "transcript_quote": null,
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 4,
+     "action": "매장 내 분리수거함을 확인하고 쓰레기를 비운다.",
+     "tools": [
+      "분리수거함"
+     ],
+     "location": "매장 분리수거대",
+     "cautions": [
+      "유리, 플라스틱/캔, 일반쓰레기 등 분리배출 규격에 맞게 분류한다."
+     ],
+     "evidence_start": "04:02",
+     "evidence_end": "04:05",
+     "transcript_quote": "쓰레기통도 비워 주어요.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  }
+ ]
+}
