@@ -197,3 +197,36 @@ def test_public_reference_multiple_codes(data):
     assert "### [N1 공통직무]\n- [위생관리] 조리복을 착용할 수 있다" in ncs
     assert "### [N2 ]\n- [밥조리] 쌀을 씻을 수 있다" in ncs
     assert "미생물" not in ncs                                   # 지식·기술·태도는 제외
+
+
+def test_easy_retries_hard_words(data, monkeypatch):
+    """5.5: 어려운 낱말(vocab_overrides hard)도 다시 만들 기준. 도구 이름 속 낱말은 바꾸라고 하지 않는다."""
+    from app.pipeline import gemini
+
+    (data / "curated/vocab_overrides.csv").write_text("word,action,note\n세제,hard,\n밀대,hard,\n", encoding="utf-8")
+    batch.stage_preprocess("kitchen_helper")
+    batch.stage_transcribe("kitchen_helper")
+    batch.stage_extract("kitchen_helper")
+    calls = []
+
+    def gen(model, contents, schema, system=None):
+        calls.append(contents[0])
+        if len(calls) == 1:
+            return EasyTextBatch(items=[
+                EasyTextItem(order=1, easy_text="식기세척기에 세제 50ml를 넣어요.",
+                             easier_text="식기세척기에 세제 50ml를 넣어요.", caution_text=None, source_numbers=["50ml"]),
+                EasyTextItem(order=2, easy_text="밀대로 바닥 물을 닦아요.", easier_text="밀대로 바닥을 닦아요.",
+                             caution_text="미끄러지지 않게 조심해요.", source_numbers=[]),
+            ])
+        return EasyTextBatch(items=[EasyTextItem(order=1, easy_text="식기세척기에 비누 50ml를 넣어요.",
+                                                 easier_text="식기세척기에 비누 50ml를 넣어요.", caution_text=None,
+                                                 source_numbers=["50ml"])])
+
+    monkeypatch.setattr(gemini, "generate_structured", gen)
+    batch.stage_easy("kitchen_helper")
+
+    assert len(calls) == 2
+    assert "easy_text 어려운 낱말: 세제(고급)" in calls[1]
+    assert "밀대" not in calls[1]                      # 2번은 '밀대' 가 도구 이름이라 다시 만들지 않음
+    items = {i["order"]: i for i in batch.load_json(data / "work/kitchen_helper/easy.json")["items"]}
+    assert items[1]["easy_text"] == "식기세척기에 비누 50ml를 넣어요."

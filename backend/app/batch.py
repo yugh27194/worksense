@@ -221,12 +221,20 @@ def stage_easy(job: str) -> None:
     rep = gemini.generate_structured(model, [EASY_PROMPT.format(steps=steps_text(steps))], EasyTextBatch)
     items = {i.order: i.model_dump() for i in rep.items}
 
-    # 수치·도구명 누락, 해요체가 아닌 문장이 있는 단계만 문제를 알려 주고 다시 만든다. 문제가 줄어든 경우에만 바꾼다.
-    kiwi = build_kiwi({r["term"] for r in read_csv(DATA / "curated/field_terms.csv") if r["job_key"] == job})
+    # 수치·도구명 누락, 해요체 아님, 어려운 낱말이 있는 단계만 문제를 알려 주고 다시 만든다.
+    # 문제가 줄어든 경우에만 바꾼다.
+    # 사업주가 볼 필요 없는 문장 품질 문제는 여기서 최대한 AI 가 먼저 고친다.
+    terms = {r["term"] for r in read_csv(DATA / "curated/field_terms.csv") if r["job_key"] == job}
+    kiwi = build_kiwi(terms)
+    grade = make_grade_fn(job)
     by_order = {s["order"]: s for s in steps}
+
+    def problems(o: int, item: dict) -> list[str]:
+        return easy_problems(kiwi, by_order[o], item, grade_fn=grade, field_terms=terms)
+
     retried = fixed = 0
     for _ in range(EASY_RETRIES):
-        bad = {o: p for o in items if o in by_order and (p := easy_problems(kiwi, by_order[o], items[o]))}
+        bad = {o: p for o in items if o in by_order and (p := problems(o, items[o]))}
         if not bad:
             break
         retried += len(bad)
@@ -235,12 +243,12 @@ def stage_easy(job: str) -> None:
             model, [EASY_PROMPT.format(steps=steps_text([by_order[o] for o in bad])) + note], EasyTextBatch)
         for it in again.items:
             new = it.model_dump()
-            if it.order in bad and len(easy_problems(kiwi, by_order[it.order], new)) < len(bad[it.order]):
+            if it.order in bad and len(problems(it.order, new)) < len(bad[it.order]):
                 items[it.order] = new
                 fixed += 1
 
     missing = [s["order"] for s in steps if s["order"] not in items]
-    still = [o for o in items if o in by_order and easy_problems(kiwi, by_order[o], items[o])]
+    still = [o for o in items if o in by_order and problems(o, items[o])]
     save_json(work_dir(job) / "easy.json", {"items": [items[o] for o in sorted(items)]})
     print(f"[easy] 안내문 {len(items)}개, 다시 만든 단계 {retried}회·나아짐 {fixed}회, 남은 문제 단계 {still}"
           + (f", 빠진 단계 {missing}" if missing else ""))
@@ -249,21 +257,27 @@ def stage_easy(job: str) -> None:
 EASY_RETRIES = 2
 
 
-def easy_problems(kiwi, step: dict, item: dict) -> list[str]:
-    """다시 만들 기준: 기계로 판정할 수 있는 것만 (수치·도구명 누락·추가, '~다.' 로 끝나는 문장). 어휘 등급은 제외."""
-    from app.pipeline.easy_text_check import check
+def easy_problems(kiwi, step: dict, item: dict, grade_fn=None, field_terms: set[str] | None = None) -> list[str]:
+    """다시 만들 기준: 기계로 판정할 수 있는 것만.
+    수치·도구명 누락·추가, '~다.' 로 끝나는 문장, 어려운 낱말(grade_fn 을 줄 때. 현장 용어·도구 이름 속 낱말은 제외)."""
+    from app.pipeline.easy_text_check import check, conjugation_errors
 
     source = " ".join([step["action"], *step["cautions"]])
     caution = item.get("caution_text") or ""
+    exempt = set(field_terms or ())
     out = []
     for label, text in (("easy_text", item.get("easy_text", "")), ("easier_text", item.get("easier_text", ""))):
-        r = check(kiwi, source, f"{text} {caution}".strip(), tools=step["tools"], field_terms=set(),
-                  grade_fn=lambda w: "초급")
+        r = check(kiwi, source, f"{text} {caution}".strip(), tools=step["tools"], field_terms=exempt,
+                  grade_fn=grade_fn or (lambda w: "초급"))
         out += [f"{label} {n}" for n in r.missing_info + r.added_info]
+        # 도구 이름은 글자 그대로 쓰라고 했으므로, 도구 이름에 든 낱말은 바꾸라고 하지 않는다
+        out += [f"{label} 어려운 낱말: {w}({g or '등급 없음'})" for w, g in r.hard_words
+                if not any(w in t for t in step["tools"])]
     for label, text in (("easy_text", item.get("easy_text", "")), ("easier_text", item.get("easier_text", "")),
                         ("caution_text", caution)):
         if any(x.rstrip(" .!?").endswith("다") for x in re.split(r"(?<=[.!?])\s+", text) if x.strip()):
             out.append(f"{label} 해요체 아님: {text}")
+        out += [f"{label} 맞춤법: {e}" for e in conjugation_errors(kiwi, text)]
     return out
 
 
@@ -300,7 +314,7 @@ def make_grade_fn(job: str):
 
 
 def stage_check(job: str) -> None:
-    from app.pipeline.easy_text_check import build_kiwi, check
+    from app.pipeline.easy_text_check import build_kiwi, check, conjugation_errors
 
     terms = {r["term"] for r in read_csv(DATA / "curated/field_terms.csv") if r["job_key"] == job}
     kiwi = build_kiwi(terms)
@@ -314,12 +328,16 @@ def stage_check(job: str) -> None:
         source = " ".join([st["action"], *st["cautions"]])
         target = " ".join(x for x in [e["easy_text"], e.get("caution_text") or ""] if x)
         r = check(kiwi, source, target, tools=st["tools"], field_terms=terms, grade_fn=grade)
-        rows = [{"type": t, **p} for t, p in r.to_step_checks()]
+        # 도구 이름 속 낱말(예: 식기세척기의 '세척')은 바꾸라고 할 수 없으므로 경고하지 않는다 (easy_problems 와 같음)
+        rows = [{"type": t, **p} for t, p in r.to_step_checks()
+                if not (t == "vocab" and any(p["word"] in tool for tool in st["tools"]))]
         if e.get("easier_text"):  # 「더 쉽게」 문장도 수치·도구명 누락을 본다 (어휘는 easy_text 와 겹치므로 생략)
             easier = " ".join(x for x in [e["easier_text"], e.get("caution_text") or ""] if x)
             r2 = check(kiwi, source, easier, tools=st["tools"], field_terms=terms, grade_fn=grade)
             rows += [{"type": t, "note": f"더 쉽게 문장 {p['note']}"} for t, p in r2.to_step_checks()
                      if t != "vocab"]
+        for text in (e.get("easy_text"), e.get("easier_text"), e.get("caution_text")):
+            rows += [{"type": "grammar", "note": f"맞춤법: {x}"} for x in conjugation_errors(kiwi, text or "")]
         out[st["order"]] = rows
     save_json(work_dir(job) / "checks.json", out)
     print(f"[check] 경고 있는 단계 {sum(1 for v in out.values() if v)}개")

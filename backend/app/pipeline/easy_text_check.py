@@ -75,3 +75,36 @@ def check(kiwi: Kiwi, source: str, easy: str, tools: list[str], field_terms: set
     res.added_info += [f"원문에 없는 수치: {n}" for n in easy_nums if n not in src_nums]
     res.missing_info += [f"도구명 누락: {t}" for t in tools if t not in easy]
     return res
+
+
+_JUNG = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
+
+
+def _vowel_final(ch: str) -> tuple[str, bool] | None:
+    code = ord(ch) - 0xAC00
+    if not 0 <= code < 11172:
+        return None
+    return _JUNG[(code // 28) % 21], code % 28 != 0
+
+
+def conjugation_errors(kiwi: Kiwi, text: str) -> list[str]:
+    """'닦어요' 처럼 받침 있는 어간 뒤 '-아/-어' 모음 어울림이 틀린 곳. 어간이 ㅏ·ㅗ 로 끝나면 '-아', 아니면 '-어'.
+    Kiwi 가 어간+어미로 나눈 경우만 본다. '넣아요' 같은 반대 경우는 Kiwi 가 다르게 쪼개서 대부분 못 잡는다.
+    불규칙 활용처럼 글자가 바뀐 경우(돕다→도와요)는 보지 않는다."""
+    out = []
+    toks = kiwi.tokenize(text)
+    for a, b in zip(toks, toks[1:], strict=False):
+        if a.tag.split("-")[0] not in ("VV", "VA") or not b.tag.startswith("E"):
+            continue
+        stem_end = a.start + a.len
+        if text[a.start:stem_end] != a.form or b.start != stem_end or stem_end >= len(text):
+            continue
+        vf = _vowel_final(a.form[-1])
+        first = text[stem_end]
+        if not vf or not vf[1] or first not in "아어":
+            continue
+        want = "아" if vf[0] in ("ㅏ", "ㅗ") else "어"
+        if first != want:
+            word = text[a.start:stem_end + b.len]
+            out.append(f"'{word}' → '{a.form}{want}{word[len(a.form) + 1:]}'")
+    return out

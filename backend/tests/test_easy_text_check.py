@@ -40,3 +40,15 @@ def test_missing_tool(kiwi):
     r = check(kiwi, "", "우유를 부어요.", tools=["스팀피처"], field_terms=set(TERMS), grade_fn=GRADES.get)
     assert "도구명 누락: 스팀피처" in r.missing_info
     assert ("key_info_missing", {"note": "도구명 누락: 스팀피처"}) in r.to_step_checks()
+
+
+def test_conjugation_errors():
+    from kiwipiepy import Kiwi
+
+    from app.pipeline.easy_text_check import conjugation_errors
+
+    k = Kiwi()
+    assert conjugation_errors(k, "행주로 식탁을 닦어요.") == ["'닦어요' → '닦아요'"]
+    assert conjugation_errors(k, "그릇을 쌓어요.") == ["'쌓어요' → '쌓아요'"]
+    for ok in ("식탁을 닦아요.", "세제를 넣어요.", "다듬어요", "도와요", "들어요", "켜요", "해요"):
+        assert conjugation_errors(k, ok) == [], ok
