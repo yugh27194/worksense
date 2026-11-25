@@ -1,0 +1,159 @@
+{
+ "variant": "base",
+ "run": 4,
+ "tasks": [
+  {
+   "task_name": "복장 착용",
+   "steps": [
+    {
+     "order": 1,
+     "action": "위생모자, 앞치마, 마스크, 장갑을 착용한다.",
+     "tools": [
+      "위생모자",
+      "앞치마",
+      "마스크",
+      "장갑"
+     ],
+     "location": "주방/매장",
+     "cautions": [],
+     "evidence_start": "02:35",
+     "evidence_end": "02:44",
+     "transcript_quote": "먼저 보조원이 갖추어야 할 복장을 착용해 볼게요. 위생모자, 앞치마, 마스크, 장갑.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  },
+  {
+   "task_name": "매장 청소",
+   "steps": [
+    {
+     "order": 1,
+     "action": "밀대(대걸레)를 이용해 매장 바닥의 떨어진 음식물이나 쓰레기가 없도록 바닥을 닦는다.",
+     "tools": [
+      "밀대(대걸레)"
+     ],
+     "location": "매장 홀",
+     "cautions": [
+      "떨어진 음식물이나 쓰레기 등이 없게 청소"
+     ],
+     "evidence_start": "02:46",
+     "evidence_end": "02:54",
+     "transcript_quote": "매장 청소하는 방법부터 알아볼게요. 바닥을 닦습니다. 떨어진 음식물이나 쓰레기 등이 없게 합니다.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "식탁과 의자를 알코올 등 소독제를 묻힌 분홍색 행주로 닦는다.",
+     "tools": [
+      "행주",
+      "알코올(소독제)"
+     ],
+     "location": "매장 홀 식탁",
+     "cautions": [
+      "소독제를 사용하여 위생적으로 닦음"
+     ],
+     "evidence_start": "02:55",
+     "evidence_end": "03:00",
+     "transcript_quote": "식탁과 의자를 닦을 때는 알코올과 같은 소독제로 닦습니다.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  },
+  {
+   "task_name": "조리 보조 (식재료 손질)",
+   "steps": [
+    {
+     "order": 1,
+     "action": "양파의 껍질을 벗겨 손질한다.",
+     "tools": [
+      "채반(바구니)"
+     ],
+     "location": "주방 조리대",
+     "cautions": [],
+     "evidence_start": "03:01",
+     "evidence_end": "03:06",
+     "transcript_quote": "요리하는 주방장을 도와주는 조리 보조하기입니다. 양파나 대파 같은 재료의 껍질을 벗기고 손질합니다.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "대파의 껍질을 벗기고 다듬어 손질한다.",
+     "tools": [
+      "칼",
+      "채반(바구니)"
+     ],
+     "location": "주방 조리대",
+     "cautions": [
+      "조리도구(칼 등) 사용 시 다치지 않도록 조심"
+     ],
+     "evidence_start": "03:06",
+     "evidence_end": "03:13",
+     "transcript_quote": "양파나 대파 같은 재료의 껍질을 벗기고 손질합니다.",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  },
+  {
+   "task_name": "식기 세척 및 정리",
+   "steps": [
+    {
+     "order": 1,
+     "action": "식기세척판(랙)에 그릇/접시를 같은 방향으로 꽂아 정리한다.",
+     "tools": [
+      "식기세척판(랙)",
+      "고무장갑"
+     ],
+     "location": "주방 싱크대/세척 구역",
+     "cautions": [
+      "홀과 주방에서는 각각 다른 장갑을 사용함",
+      "식기가 겹치지 않게 동일한 방향으로 정렬"
+     ],
+     "evidence_start": "03:14",
+     "evidence_end": "03:21",
+     "transcript_quote": "식기 세척판에 똑같은 방향으로 식기를 꽂아줍니다.",
+     "needs_review": false,
+     "review_reason": null
+    },
+    {
+     "order": 2,
+     "action": "식기를 꽂은 식기세척판을 식기세척기 내부로 밀어 넣고 도어를 내린다.",
+     "tools": [
+      "식기세척기",
+      "식기세척판(랙)"
+     ],
+     "location": "주방 식기세척기",
+     "cautions": [
+      "식기세척판을 기기 안쪽 정확한 위치에 넣을 것"
+     ],
+     "evidence_start": "03:22",
+     "evidence_end": "03:32",
+     "transcript_quote": "식기 세척판을 식기세척기 안에 정확하게 넣어줍니다.",
+     "needs_review": true,
+     "review_reason": "식기세척기 상세 조작 버튼, 세척 코스/온도 및 세제 투입 규격은 사업장 기기 모델마다 다름"
+    },
+    {
+     "order": 3,
+     "action": "세척이 완료된 식기를 종류별(접시, 그릇)로 구분하여 선반에 정리해 쌓는다.",
+     "tools": [
+      "선반(선반장)",
+      "고무장갑"
+     ],
+     "location": "주방 식기 보관 선반",
+     "cautions": [
+      "유리와 사기 같은 그릇은 깨지지 않게 주의"
+     ],
+     "evidence_start": "03:33",
+     "evidence_end": "03:49",
+     "transcript_quote": "음식을 담는 그릇을 종류별로 정리합니다. 접시는 접시대로, 그릇은 그릇대로 정리합니다. 유리와 사기 같은 그릇은 깨지지 않게 주의하세요!",
+     "needs_review": false,
+     "review_reason": null
+    }
+   ]
+  }
+ ]
+}
