@@ -58,7 +58,8 @@ def check_all(data_dir: str | Path = "data") -> list[str]:
                 errors.append(f"jobs.csv {i}행: status 는 candidate 또는 confirmed")
             vf = row.get("video_file")
             if vf and not (root / "raw/media" / vf).exists():
-                errors.append(f"jobs.csv {i}행: data/raw/media/{vf} 없음 (영상은 git 에 안 올라가므로 따로 전달)")
+                # 영상은 git 에 올리지 않으므로 오류가 아니라 안내만 한다 (파이프라인을 돌리는 쪽에만 있으면 된다)
+                print(f"참고: jobs.csv {i}행 영상 data/raw/media/{vf} 가 이 컴퓨터에는 없음")
 
     if (root / "curated/field_terms.csv").exists():
         _, terms = _read(root / "curated/field_terms.csv")

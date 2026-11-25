@@ -1,6 +1,8 @@
 """근로자 API (인계서 7장, /w 접두사). QR 토큰으로 세션을 식별하며 승인된 단계만 보여 준다."""
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 
@@ -50,14 +52,36 @@ def task_cards(task_id: int, s=Depends(session), conn=Depends(get_conn)):
     """승인된 단계 카드: 행동 문장, 대표 사진, 5~10초 영상, 주의 사항."""
     return conn.execute(
         """
-        SELECT st.id, st.sort_order, st.easy_text, st.caution_text, st.photo_path, st.clip_path,
-               st.location_markup, st.ai_generated, st.approved_at
+        SELECT st.id, st.sort_order, st.easy_text, st.easier_text, st.caution_text, st.tools,
+               st.photo_path, st.clip_path, st.location_markup, st.ai_generated, st.approved_at
         FROM steps st JOIN tasks t ON t.id = st.task_id JOIN manuals m ON m.id = t.manual_id
         WHERE t.id = %s AND m.workplace_id = %s AND st.status = 'approved'
         ORDER BY st.sort_order
         """,
         (task_id, s["workplace_id"]),
     ).fetchall()
+
+
+class Help(BaseModel):
+    step_id: int
+    kind: Literal["repeat", "easier", "photo", "handoff", "done"]
+
+
+@router.post("/help")
+def help_button(body: Help, s=Depends(session), conn=Depends(get_conn)):
+    """버튼형 도움 기록 (제안서 6장 2). 근로자 세션은 저장하지 않고 단계별 합계로만 쓴다.
+    '사람 불러줘'(handoff)는 담당자 화면의 호출 목록에 뜬다 (연결 채널은 12장 #4 미결)."""
+    ok = conn.execute(
+        "SELECT 1 FROM steps st JOIN tasks t ON t.id = st.task_id JOIN manuals m ON m.id = t.manual_id "
+        "WHERE st.id = %s AND m.workplace_id = %s AND st.status = 'approved'",
+        (body.step_id, s["workplace_id"]),
+    ).fetchone()
+    if ok is None:
+        raise HTTPException(404)
+    conn.execute("INSERT INTO help_events (workplace_id, step_id, kind) VALUES (%s, %s, %s)",
+                 (s["workplace_id"], body.step_id, body.kind))
+    conn.commit()
+    return {"ok": True}
 
 
 class Ask(BaseModel):

@@ -2,10 +2,11 @@
 
 // 담당자 웹 (인계서 8장): 1 자료 업로드 → 2 분석 진행 → 3 매뉴얼 검토 → 4 승인 → 5 개선 요청 → 6 QR·현장 용어
 // 지금은 1·2·6 의 최소 동작만 있다. 3~5 는 백엔드 TODO 와 Figma 시안 확정 후 채운다.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { staffFetch } from "@/lib/api";
 
 type Stage = { stage: string; status: string; error: string | null };
+type Call = { id: number; created_at: string; task_name: string; sort_order: number; easy_text: string };
 
 export default function StaffPage() {
   const [workplaceId, setWorkplaceId] = useState(1);
@@ -16,6 +17,15 @@ export default function StaffPage() {
   const [stages, setStages] = useState<Stage[]>([]);
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [calls, setCalls] = useState<Call[]>([]);
+
+  // '사람 불러줘' 호출 목록: 10초마다 새로고침 (연결 채널은 12장 #4 미결이라 우선 화면 표시)
+  useEffect(() => {
+    const load = () => staffFetch("/help/calls", workplaceId).then(setCalls).catch(() => {});
+    load();
+    const t = setInterval(load, 10000);
+    return () => clearInterval(t);
+  }, [workplaceId]);
 
   async function upload() {
     if (!file) return;
@@ -53,6 +63,21 @@ export default function StaffPage() {
         사업장 ID (개발용)
         <input type="number" value={workplaceId} onChange={(e) => setWorkplaceId(Number(e.target.value))} />
       </label>
+
+      <section className="card">
+        <h2>도움 요청</h2>
+        {calls.length === 0 ? (
+          <p>지금 들어온 요청이 없어요.</p>
+        ) : (
+          <ul>
+            {calls.map((c) => (
+              <li key={c.id} className="warn">
+                {new Date(c.created_at).toLocaleTimeString("ko-KR")} · {c.task_name} {c.sort_order}번 단계 — {c.easy_text}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="card">
         <h2>1. 자료 업로드</h2>

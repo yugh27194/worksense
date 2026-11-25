@@ -1,0 +1,147 @@
+"""일괄 생성 파이프라인 전체 흐름 (Gemini 는 가짜 응답으로 대체). 영상은 ffmpeg 로 합성한다."""
+import csv
+import shutil
+import subprocess
+
+import pytest
+
+from app import batch
+from app.schemas.llm import (
+    EasyTextBatch,
+    EasyTextItem,
+    ExtractedStep,
+    Gap,
+    GapReport,
+    StepExtraction,
+    TaskExtraction,
+    Transcript,
+    TranscriptSegment,
+)
+
+pytestmark = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg 필요")
+
+
+def fake_generate(model, contents, schema, system=None):
+    if schema is Transcript:
+        return Transcript(segments=[TranscriptSegment(start="00:01", end="00:04", text="식기세척기에 세제를 50ml 넣어요")])
+    if schema is TaskExtraction:
+        return TaskExtraction(tasks=[StepExtraction(task_name="마감 정리", steps=[
+            ExtractedStep(order=1, action="식기세척기에 세제 50ml 넣기", tools=["식기세척기"], location="주방",
+                          cautions=[], evidence_start="00:01", evidence_end="00:03", needs_review=False),
+            ExtractedStep(order=2, action="바닥 물기 닦기", tools=["밀대"], location=None, cautions=["미끄럼 주의"],
+                          evidence_start="00:05", evidence_end="00:20", needs_review=True, review_reason="밀대 위치 불명"),
+        ])])
+    if schema is GapReport:
+        return GapReport(gaps=[Gap(source="JOBCODE", criterion="쓰레기를 분리 배출한다", related_step_order=None,
+                                   gap_type="missing", note="")])
+    if schema is EasyTextBatch:
+        return EasyTextBatch(items=[
+            EasyTextItem(order=1, easy_text="식기세척기에 세제를 넣어요.", easier_text="세제를 넣어요.", caution_text=None,
+                         source_numbers=["50ml"]),
+            EasyTextItem(order=2, easy_text="밀대로 바닥 물을 닦아요.", easier_text="바닥을 닦아요.",
+                         caution_text="미끄러지지 않게 조심해요.", source_numbers=[]),
+        ])
+    raise AssertionError(schema)
+
+
+@pytest.fixture
+def data(tmp_path, monkeypatch):
+    d = tmp_path / "data"
+    (d / "curated").mkdir(parents=True)
+    (d / "raw/media").mkdir(parents=True)
+    (d / "raw/api").mkdir(parents=True)
+    (d / "curated/jobs.csv").write_text(
+        "job_key,job_name,public_video_id,video_file,ncs_duty_cd,job_cd,status,note\n"
+        "kitchen_helper,주방보조원,15123777,kitchen_helper.mp4,,J1,confirmed,\n", encoding="utf-8")
+    (d / "curated/field_terms.csv").write_text("job_key,term,description\nkitchen_helper,식기세척기,\n", encoding="utf-8")
+    (d / "curated/vocab_overrides.csv").write_text("word,action,note\n", encoding="utf-8")
+    (d / "raw/api/jobcode.csv").write_text("jobCd,jobCdNm,jobTask\nJ1,주방보조원,설거지와 주방 정리\n", encoding="utf-8")
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=duration=25:size=320x240:rate=10",
+                    "-f", "lavfi", "-i", "sine=duration=25", "-shortest", "-c:v", "libx264", "-c:a", "aac",
+                    str(d / "raw/media/kitchen_helper.mp4")], check=True)
+    monkeypatch.setattr(batch, "DATA", d)
+    from app.pipeline import gemini
+
+    monkeypatch.setattr(gemini, "generate_structured", fake_generate)
+    monkeypatch.setattr(gemini, "upload_file", lambda path: object())
+    monkeypatch.setattr(gemini, "file_part", lambda f: "VIDEO")
+    monkeypatch.setattr(gemini, "audio_part", lambda path: "AUDIO")
+    monkeypatch.setenv("KRDICT_KEY", "")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    return d
+
+
+def test_full_pipeline(data):
+    for name in batch.STAGES:
+        batch.STAGES[name]("kitchen_helper")
+
+    tr = list(csv.DictReader((data / "review/kitchen_helper/transcript.csv").open(encoding="utf-8-sig")))
+    assert tr[0]["start"] == "00:01"
+
+    rows = list(csv.DictReader((data / "review/kitchen_helper/steps_review.csv").open(encoding="utf-8-sig")))
+    assert [r["order"] for r in rows] == ["1", "2"]
+    assert rows[0]["easier_text"] == "세제를 넣어요."
+    assert "수치 누락: 50ml" in rows[0]["checks"]          # 5.6 자동 점검이 안내문에서 빠진 수치를 잡는다
+    assert rows[1]["needs_review"] == "True"
+    assert rows[0]["photo"] == "step001.jpg" and rows[0]["clip"] == "step001.mp4"
+    assert (data / "work/kitchen_helper/media/step002.mp4").exists()
+    assert (data / "review/kitchen_helper/gaps_unlinked.csv").exists()
+
+    # 검수 열은 다시 내보내도 보존된다
+    rows[0]["decision"] = "approve"
+    batch.write_csv(data / "review/kitchen_helper/steps_review.csv", batch.REVIEW_COLUMNS, rows)
+    batch.stage_export("kitchen_helper")
+    again = list(csv.DictReader((data / "review/kitchen_helper/steps_review.csv").open(encoding="utf-8-sig")))
+    assert again[0]["decision"] == "approve"
+
+
+@pytest.mark.skipif(not __import__("os").environ.get("TEST_DATABASE_URL"), reason="TEST_DATABASE_URL 없음")
+def test_import_and_worker_screen(data, monkeypatch):
+    """검수 → DB 반영 → 근로자 화면 API → 도움 단추 → 담당자 호출 목록."""
+    import os
+
+    from fastapi.testclient import TestClient
+
+    from app import db
+    from app.config import get_settings
+
+    monkeypatch.setenv("DATABASE_URL", os.environ["TEST_DATABASE_URL"])
+    get_settings.cache_clear()
+    db._pool = None
+
+    for name in batch.STAGES:
+        batch.STAGES[name]("kitchen_helper")
+    path = data / "review/kitchen_helper/steps_review.csv"
+    rows = list(csv.DictReader(path.open(encoding="utf-8-sig")))
+    rows[0].update(decision="edit", edited_easy_text="식기세척기에 세제를 50ml 넣어요.")
+    rows[1].update(decision="reject")
+    batch.write_csv(path, batch.REVIEW_COLUMNS, rows)
+
+    from app.importer import import_job
+
+    r = import_job("kitchen_helper")
+    assert r["approved"] == 1
+    import_job("kitchen_helper")  # 다시 넣어도 중복되지 않는다
+
+    from app.main import app
+
+    c = TestClient(app)
+    wp = {"X-Workplace-Id": str(r["workplace_id"])}
+    tok = c.post(f"/workplaces/{r['workplace_id']}/qr", headers=wp).json()["qr_token"]
+    w = {"X-Worker-Token": tok}
+    tasks = c.get("/w/manuals", headers=w).json()
+    assert [t["task_name"] for t in tasks] == ["마감 정리"]
+    cards = c.get(f"/w/tasks/{tasks[0]['task_id']}", headers=w).json()
+    assert len(cards) == 1                                    # reject 된 단계는 안 보인다
+    assert cards[0]["easy_text"] == "식기세척기에 세제를 50ml 넣어요."
+    assert cards[0]["easier_text"] == "세제를 넣어요."
+    assert c.get(f"/files/{cards[0]['photo_path']}").status_code == 200
+    assert c.get("/files/kitchen_helper/audio.wav").status_code == 404   # 사진·클립 외 파일은 막는다
+
+    assert c.post("/w/help", headers=w, json={"step_id": cards[0]["id"], "kind": "handoff"}).json() == {"ok": True}
+    calls = c.get("/help/calls", headers=wp).json()
+    assert calls[0]["task_name"] == "마감 정리"
+    stats = c.get("/help/stats", headers=wp).json()
+    assert stats[0]["handoff"] == 1

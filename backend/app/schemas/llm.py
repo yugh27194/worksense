@@ -8,6 +8,25 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+# 5.2 음성 전사 -------------------------------------------------------------
+class TranscriptSegment(BaseModel):
+    start: str = Field(description="문장 시작 시각 MM:SS (이 오디오 조각 기준)")
+    end: str = Field(description="문장 끝 시각 MM:SS (이 오디오 조각 기준)")
+    text: str = Field(description="들리는 그대로의 한국어 문장")
+
+
+class Transcript(BaseModel):
+    segments: list[TranscriptSegment]
+
+
+TRANSCRIBE_PROMPT = """\
+이 한국어 오디오를 문장 단위로 빠짐없이 받아 적는다.
+- 들리는 말만 적고, 요약하거나 고치지 않는다.
+- 각 문장의 시작·끝 시각을 MM:SS 로 적는다.
+- 배경 음악·효과음만 있는 구간은 적지 않는다.
+"""
+
+
 # 5.3 작업 단계 추출 ----------------------------------------------------------
 class ExtractedStep(BaseModel):
     order: int
@@ -27,11 +46,27 @@ class StepExtraction(BaseModel):
     steps: list[ExtractedStep]
 
 
+class TaskExtraction(BaseModel):
+    """한 영상에 업무(task)가 여러 개일 수 있다. 매뉴얼 구조: 직무 → 업무 → 단계 (5.5)."""
+    tasks: list[StepExtraction]
+
+
 EXTRACTION_RULES = """\
 1. 화면과 전사문에서 직접 확인되는 내용만 쓴다.
 2. 한 단계에는 행동 하나만 담는다.
 3. 기기 조작법, 수치, 사업장마다 다른 절차처럼 확정할 수 없는 값은 비우고 needs_review=true 와 이유를 적는다.
 4. 근거 구간은 그 행동이 보이거나 말해지는 구간으로 한다.
+"""
+
+EXTRACTION_PROMPT = """\
+이 영상은 '{job_name}' 직무를 소개하는 교육 영상이다. 영상 화면과 아래 시각 표시 전사문을 함께 보고,
+근로자가 실제로 하는 업무를 업무(task)별로 나누고, 업무마다 작업 단계(steps)를 순서대로 뽑는다.
+직무 소개·인터뷰·소감처럼 작업 행동이 아닌 구간은 단계로 만들지 않는다.
+
+규칙
+{rules}
+전사문
+{transcript}
 """
 
 
@@ -94,11 +129,56 @@ class MatchResult(BaseModel):
     gaps: list[Gap]
 
 
+class GapReport(BaseModel):
+    """직무 코드를 사람이 확정한 경우(notebooks/02)에는 함수 호출 없이 공공데이터 원문을 바로 넣어 누락만 찾는다."""
+    gaps: list[Gap]
+
+
+GAP_PROMPT = """\
+아래는 AI 가 영상에서 뽑은 '{job_name}' 작업 단계와, 이 직무의 공공 직무데이터 원문이다.
+공공데이터 원문의 수행업무·수행준거 중 작업 단계에 없거나(missing) 설명이 부족한(insufficient) 항목을 찾는다.
+- criterion 에는 공공데이터 원문 문장을 고치지 말고 그대로 옮긴다.
+- 영상 직무 범위와 무관한 항목(관리·교육·경영 등)은 제외한다.
+- 관련 단계가 있으면 related_step_order 에 그 order 를, 없으면 null.
+
+작업 단계
+{steps}
+장애인 고용직무분류 수행업무 (JOBCODE)
+{jobcode}
+NCS 수행준거 (NCS)
+{ncs}
+"""
+
+
 # 5.5 쉬운 안내문 ------------------------------------------------------------
 class EasyText(BaseModel):
     easy_text: str = Field(description="한 문장 한 행동 안내문")
     caution_text: str | None
     source_numbers: list[str] = Field(description="원문에서 옮긴 수치·단위")
+
+
+class EasyTextItem(EasyText):
+    order: int
+    easier_text: str = Field(description="「더 쉽게」 버튼용: 더 짧고 더 쉬운 낱말로 쓴 같은 행동")
+
+
+class EasyTextBatch(BaseModel):
+    items: list[EasyTextItem]
+
+
+EASY_PROMPT = """\
+경계선지능 근로자가 읽을 작업 안내문을 쓴다. 아래 작업 단계 하나마다 안내문을 만든다.
+원칙 (국내 발달장애인 읽기 쉬운 자료 연구, W3C 인지·학습 접근성 가이드라인 참고)
+- 한 문장에 하나의 행동만 쓴다. 해요체로 쓴다.
+- 쉬운 일상 낱말을 쓴다. 한자어·외래어는 쉬운 말로 바꾸되, 현장 도구 이름은 그대로 둔다.
+- 원문의 수치·단위·도구 이름·주의 사항은 빠뜨리거나 바꾸거나 새로 지어내지 않는다.
+- easy_text: 기본 안내문. easier_text: 더 짧고 더 쉬운 낱말로 쓴 같은 행동.
+- caution_text: 주의 사항이 있을 때만 한 문장. 없으면 null.
+- source_numbers: 원문에 있는 수치·단위를 그대로 옮긴다. 없으면 빈 목록.
+
+작업 단계 (order, 행동, 도구, 위치, 주의 사항)
+{steps}
+"""
 
 
 # 5.10 질의응답 --------------------------------------------------------------

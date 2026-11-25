@@ -1,1 +1,2 @@
 job_key,job_name,public_video_id,video_file,ncs_duty_cd,job_cd,status,note
+kitchen_helper,주방보조원,15123777,kitchen_helper.mp4,,,candidate,코드는 notebooks/02 에서 확정

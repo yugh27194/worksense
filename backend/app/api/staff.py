@@ -137,3 +137,36 @@ def issue_qr(wid: int, wp: int = Depends(workplace_id), conn=Depends(get_conn)):
     conn.execute("INSERT INTO worker_sessions (workplace_id, qr_token) VALUES (%s, %s)", (wid, token))
     conn.commit()
     return {"qr_token": token, "path": f"/w/{token}"}
+
+
+@router.get("/help/calls")
+def help_calls(wp: int = Depends(workplace_id), conn=Depends(get_conn)):
+    """'사람 불러줘' 최근 호출 목록 (어느 업무·단계에서). 근로자는 식별하지 않는다."""
+    return conn.execute(
+        """
+        SELECT h.id, h.created_at, t.name AS task_name, st.sort_order, st.easy_text
+        FROM help_events h JOIN steps st ON st.id = h.step_id JOIN tasks t ON t.id = st.task_id
+        WHERE h.workplace_id = %s AND h.kind = 'handoff' AND h.created_at > now() - interval '1 day'
+        ORDER BY h.created_at DESC LIMIT 20
+        """,
+        (wp,),
+    ).fetchall()
+
+
+@router.get("/help/stats")
+def help_stats(wp: int = Depends(workplace_id), conn=Depends(get_conn)):
+    """단계별 도움 요청 합계 → 설명이 부족한 단계 찾기 (5.11). 개인별 통계는 만들지 않는다."""
+    return conn.execute(
+        """
+        SELECT st.id AS step_id, t.name AS task_name, st.sort_order, st.easy_text,
+               count(*) FILTER (WHERE h.kind = 'repeat') AS repeat,
+               count(*) FILTER (WHERE h.kind = 'easier') AS easier,
+               count(*) FILTER (WHERE h.kind = 'photo') AS photo,
+               count(*) FILTER (WHERE h.kind = 'handoff') AS handoff
+        FROM help_events h JOIN steps st ON st.id = h.step_id JOIN tasks t ON t.id = st.task_id
+        WHERE h.workplace_id = %s
+        GROUP BY st.id, t.name, st.sort_order, st.easy_text
+        ORDER BY count(*) DESC
+        """,
+        (wp,),
+    ).fetchall()

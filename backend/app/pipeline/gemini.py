@@ -64,6 +64,32 @@ def embed(texts: list[str]) -> list[list[float]]:
     return out
 
 
-def upload_file(path: str):
-    """100MB 초과·10분 초과·재사용 파일은 File API 업로드 권장 (3.4)."""
-    return client().files.upload(file=path)
+def upload_file(path: str, timeout_s: int = 900):
+    """100MB 초과·10분 초과·재사용 파일은 File API 업로드 권장 (3.4). 처리가 끝나(ACTIVE) 쓸 수 있을 때까지 기다린다."""
+    import time
+
+    from google.genai import types
+
+    f = client().files.upload(file=path)
+    deadline = time.monotonic() + timeout_s
+    while f.state == types.FileState.PROCESSING:
+        if time.monotonic() > deadline:
+            raise TimeoutError(f"File API 처리 대기 시간 초과: {path}")
+        time.sleep(5)
+        f = client().files.get(name=f.name)
+    if f.state != types.FileState.ACTIVE:
+        raise RuntimeError(f"File API 처리 실패: {f.state}")
+    return f
+
+
+def audio_part(path: str):
+    from google.genai import types
+
+    with open(path, "rb") as fh:
+        return types.Part.from_bytes(data=fh.read(), mime_type="audio/wav")
+
+
+def file_part(f):
+    from google.genai import types
+
+    return types.Part.from_uri(file_uri=f.uri, mime_type=f.mime_type)
