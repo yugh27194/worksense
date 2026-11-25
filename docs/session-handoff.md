@@ -37,6 +37,9 @@
   수정: 사진·영상을 열면 도움 단추가 화면 밖으로 밀리던 문제(화면 높이 고정, 단계 영역만 스크롤), 개발 표시 'N' 끄기.
 - 확인된 빈 곳: 담당자 화면 '업로드하고 분석 시작' 은 `app/worker.py` 단계가 전부 NotImplementedError.
   검증된 일괄 파이프라인(`app.batch`)과 연결해야 '영상 넣으면 매뉴얼 생성' 이 웹에서 된다.
+- 심화 분석 A·B·C (`app/experiments.py`, `data/analysis/`, data-report.md 하단). A: 화면 동작 규칙으로 누락 34%→14%.
+  B: 편의점정리원(convenience_store_clerk) 영상·전사·검토표·추출 10회, 코드·기준 답은 사용자 대기. C: 쉬운 안내문 지표.
+  사람 판정 대기: gold_evidence_labels.evidence_type, extract_pairs.error_type, vocab_judgement 미판정 23개, B 코드·기준 답.
 
 ## 이어서 할 일
 
