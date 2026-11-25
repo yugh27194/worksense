@@ -18,6 +18,7 @@
 | 12 | 기획서 그림 | 3장 1) 도구 표 FFmpeg 행 '음성 분리' 추가, Transcribe 행 문구, 4장 1) 'WORK EASY' → '일머RE' | 제출 전 | (문서) |
 | 13 | 데이터 개방 동의 | 원본·AI·수정본 자료의 이용 동의와 비식별 절차 | MVP 이후 | `step_revisions` |
 | 14 | 인증키 | 공공데이터포털 4종, 한국어기초사전, Gemini 유료 키 발급 | 즉시 | `.env.example` |
+| 15 | 전사 모델 | `gemini-3.5-transcribe` 가 현재 키로 404 (models.list 에도 없음, 2026-11-25 확인). 주방보조원 첫 실행은 `GEMINI_MODEL_TRANSCRIBE=gemini-3.8-flash` 로 대체(단어 타임스탬프 없음, 문장 단위 MM:SS). 별도 접근 권한이 필요한지 확인 후 기본값 결정 | 시연 전 | `config.py`, `.env.example` |
 
 ## 인계서 대비 이 저장소에서 정한 것 (제안 → 구현 선택)
 
