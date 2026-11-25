@@ -21,6 +21,12 @@
   부작용: 도구 이름을 지키다 보니 1~3번은 `easier_text` 가 `easy_text` 와 같다.
 - 단계 7개는 작업 장면(약 1분 15초)에 비해 적당해 보이나 기준 답과 비교 필요.
 
+- 공공 API 첫 호출(키는 사용자가 채팅으로 줘서 scratchpad 에만 둠, 환경 변수 아님 → 새 세션은 키를 다시 받아야 함).
+  `jobcode.csv`·`ncs_classification.csv`·NCS 13010100/13010101 능력단위·수행준거 커밋. 응답 형식 차이로 `data_go_kr.py` 수정, 연결 끊김 재시도 추가.
+- `jobs.csv` 확정: 사용자 결정으로 후보 코드 전부 포함(직종 4개, NCS 2개, `;` 구분). `public_reference` 가 코드별로 묶고 NCS 는 수행준거만 쓴다.
+  match 결과 누락 후보 8건(모두 단계에 연결). 코드별 정리는 `docs/data-report.md`.
+- 어휘 등급 점검 실행: '중급' 도 어려운 낱말로 잡혀 7단계 모두 경고. `field_terms.csv`·`vocab_overrides.csv` 정리 필요(데이터 담당 3번 작업).
+
 ## 이어서 할 일
 
 1. 키 확인: `test -n "$GEMINI_API_KEY"` (값은 출력하지 않는다)

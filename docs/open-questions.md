@@ -10,8 +10,8 @@
 | 4 | 담당자 연결 채널 | 앱 내 알림 / 문자 / 메신저 | 11/23 | `POST /w/handoff` |
 | 5 | 음성 안내 | '글·이미지·음성·영상' 중 음성(TTS) 도구 없음 | 발표 전 | — |
 | 6 | 복지서비스 안내 | MVP·시연 포함 여부, '일자리' 관심주제 코드, 중앙부처 API 운영계정 신청 | 11/23 | `GET /w/welfare`, `ingest/data_go_kr.py` |
-| 7 | NCS 매칭 | 카페(바리스타) 세분류 코드 확정, `ncsKsaInfo.gbnName` 값 확인 | 첫 API 호출 | `ingest/data_go_kr.py` |
-| 8 | 직무분류 매칭 | 카페 관련 직종 존재 여부, `jobCdNm`·`jobCdLevel` 설명 확인 | 첫 API 호출 | `ingest/data_go_kr.py` |
+| 7 | NCS 매칭 | 카페(바리스타) 세분류 코드 확정, ~~`ncsKsaInfo.gbnName` 값 확인~~ → 수행준거·지식·기술·태도 (2026-11-25, data-report.md) | 첫 API 호출 | `ingest/data_go_kr.py` |
+| 8 | 직무분류 매칭 | 카페 관련 직종 존재 여부(53170001 바리스타 있음), ~~`jobCdNm`·`jobCdLevel` 설명 확인~~ → 직종명·계층 (2026-11-25) | 첫 API 호출 | `ingest/data_go_kr.py` |
 | 9 | 시연 데이터 | 시범 카페 오픈·마감 영상 촬영과 동의 확보 (공공 영상에 카페 직무 없음) | 11/25 | — |
 | 10 | 임베딩·검색 | 차원 축소 시 정규화 필요 여부, 유사도 임계값, 반복 질문 묶음 기준값 보정 | 구현 중 | `pipeline/gemini.py`, `.env` `RAG_*` |
 | 11 | 개발 환경 | 백엔드·프론트엔드 프레임워크, 호스팅, 오브젝트 스토리지 | 11/22 | 본 저장소는 FastAPI + Next.js 로 시작. 호스팅·스토리지 미정 |

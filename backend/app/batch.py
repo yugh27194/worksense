@@ -164,18 +164,33 @@ def steps_text(steps: list[dict]) -> str:
 
 
 # --- 5.4 공공 직무데이터 누락 점검 ---------------------------------------------------
+def split_codes(value: str | None) -> list[str]:
+    """jobs.csv 의 코드 칸은 여러 개를 ';' 로 적을 수 있다 (예: 53230100;53230102)."""
+    return [c.strip() for c in (value or "").split(";") if c.strip()]
+
+
 def public_reference(job: str) -> tuple[str, str]:
+    """확정된 코드마다 공공데이터 원문을 따로 묶어 돌려준다 (코드별 제목 + 항목)."""
     info = job_info(job)
-    jobcode_txt = ncs_txt = ""
-    if info.get("job_cd"):
-        for r in read_csv(DATA / "raw/api/jobcode.csv"):
-            if r.get("jobCd") == info["job_cd"]:
-                jobcode_txt = r.get("jobTask", "")
-    if info.get("ncs_duty_cd"):
-        rows = read_csv(DATA / f"raw/api/ncs_ksa_{info['ncs_duty_cd']}.csv")
-        ncs_txt = "\n".join(f"- [{r.get('compUnitName', '')}] {r.get('gbnVal', '')}" for r in rows
-                            if r.get("gbnVal"))
-    return jobcode_txt, ncs_txt
+    jobcodes = {r.get("jobCd"): r for r in read_csv(DATA / "raw/api/jobcode.csv")}
+    blocks = []
+    for cd in split_codes(info.get("job_cd")):
+        r = jobcodes.get(cd)
+        if r and r.get("jobTask"):
+            blocks.append(f"### [{cd} {r.get('jobCdNm', '')}]\n{r['jobTask'].strip()}")
+    jobcode_txt = "\n".join(blocks)
+
+    names = {r["ncsLclasCd"] + r["ncsMclasCd"] + r["ncsSclasCd"] + r["ncsSubdCd"]: r.get("ncsSubdCdNm", "")
+             for r in read_csv(DATA / "raw/api/ncs_classification.csv")}
+    blocks = []
+    for cd in split_codes(info.get("ncs_duty_cd")):
+        # gbnName 은 수행준거·지식·기술·태도 4가지 (12장 #7 확인). 단계와 대조할 것은 수행준거뿐이다.
+        rows = [r for r in read_csv(DATA / f"raw/api/ncs_ksa_{cd}.csv")
+                if r.get("gbnVal") and r.get("gbnName", "수행준거") == "수행준거"]
+        if rows:
+            blocks.append(f"### [{cd} {names.get(cd, '')}]\n"
+                          + "\n".join(f"- [{r.get('compUnitName', '')}] {r['gbnVal']}" for r in rows))
+    return jobcode_txt, "\n".join(blocks)
 
 
 def stage_match(job: str) -> None:
@@ -259,6 +274,7 @@ def make_grade_fn(job: str):
     cache_path = DATA / "work" / "vocab_cache.json"
     cache: dict[str, str | None] = load_json(cache_path) if cache_path.exists() else {}
     key = get_settings().krdict_key
+    http = None
     if not key:
         print("[check] KRDICT_KEY 없음 → 어휘 등급 점검 건너뜀 (수치·도구명 대조는 실행)")
 
@@ -270,9 +286,13 @@ def make_grade_fn(job: str):
         if not key:
             return "초급"
         if word not in cache:
+            import httpx
+
             from app.ingest.krdict import lookup_grade
 
-            cache[word] = lookup_grade(word, key)
+            nonlocal http
+            http = http or httpx.Client(timeout=10)  # 낱말마다 새 연결을 열지 않는다
+            cache[word] = lookup_grade(word, key, http)
             save_json(cache_path, cache)
         return cache[word]
 
@@ -352,7 +372,7 @@ def stage_export(job: str) -> None:
             "evidence_start": st["evidence_start"], "evidence_end": st["evidence_end"],
             "needs_review": st["needs_review"], "review_reason": st.get("review_reason") or "",
             "checks": " / ".join(_check_label(c) for c in checks.get(str(o), checks.get(o, []))),
-            "gaps": " / ".join(f"[{g['source']} {g['gap_type']}] {g['criterion']}" for g in gaps
+            "gaps": " / ".join(f"[{_gap_src(g)} {g['gap_type']}] {g['criterion']}" for g in gaps
                                if g.get("related_step_order") == o),
             "photo": f"{mfile.name}.jpg" if mfile.with_suffix(".jpg").exists() else "",
             "clip": f"{mfile.name}.mp4" if mfile.with_suffix(".mp4").exists() else "",
@@ -363,8 +383,12 @@ def stage_export(job: str) -> None:
     write_csv(path, REVIEW_COLUMNS, rows)
     unlinked = [g for g in gaps if not g.get("related_step_order")]
     if unlinked:
-        write_csv(review_dir(job) / "gaps_unlinked.csv", ["source", "gap_type", "criterion", "note"], unlinked)
+        write_csv(review_dir(job) / "gaps_unlinked.csv", ["source", "code", "gap_type", "criterion", "note"], unlinked)
     print(f"[export] {path} ({len(rows)}행), 단계에 안 붙은 누락 후보 {len(unlinked)}건")
+
+
+def _gap_src(g: dict) -> str:
+    return f"{g['source']} {g['code']}" if g.get("code") else g["source"]
 
 
 def _check_label(c: dict) -> str:

@@ -118,6 +118,7 @@ class MatchCodes(BaseModel):
 
 class Gap(BaseModel):
     source: Literal["NCS", "JOBCODE"]
+    code: str | None = Field(default=None, description="원문이 나온 코드 (원문 '### [코드 이름]' 제목의 코드)")
     criterion: str = Field(description="공공데이터 원문")
     related_step_order: int | None
     gap_type: Literal["missing", "insufficient"]
@@ -140,6 +141,7 @@ GAP_PROMPT = """\
 - criterion 에는 공공데이터 원문 문장을 고치지 말고 그대로 옮긴다.
 - 영상 직무 범위와 무관한 항목(관리·교육·경영 등)은 제외한다.
 - 관련 단계가 있으면 related_step_order 에 그 order 를, 없으면 null.
+- 원문은 코드별로 '### [코드 이름]' 제목 아래 묶여 있다. 항목이 나온 코드를 code 에 적는다.
 
 작업 단계
 {steps}

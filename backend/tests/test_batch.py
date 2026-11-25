@@ -176,3 +176,24 @@ def test_easy_retries_only_flagged_steps(data, monkeypatch):
     items = {i["order"]: i for i in batch.load_json(data / "work/kitchen_helper/easy.json")["items"]}
     assert items[1]["easier_text"] == "식기세척기에 세제 50ml를 넣어요."  # 나아진 결과는 받는다
     assert items[2]["easier_text"] == "바닥을 닦아요."                    # 다시 만든 결과가 없으면 그대로
+
+
+def test_public_reference_multiple_codes(data):
+    """jobs.csv 코드 칸에 ';' 로 여러 코드 → 코드별로 묶고, NCS 는 수행준거만 넣는다."""
+    (data / "curated/jobs.csv").write_text(
+        "job_key,job_name,public_video_id,video_file,ncs_duty_cd,job_cd,status,note\n"
+        "kitchen_helper,주방보조원,15123777,kitchen_helper.mp4,N1;N2,J1;J2;J9,confirmed,\n", encoding="utf-8")
+    (data / "raw/api/jobcode.csv").write_text(
+        "jobCd,jobCdNm,jobTask\nJ1,주방 보조원,주방정리와 기물세척\nJ2,설거지원,식기를 세척한다\n", encoding="utf-8")
+    (data / "raw/api/ncs_classification.csv").write_text(
+        "ncsLclasCd,ncsMclasCd,ncsSclasCd,ncsSubdCd,ncsSubdCdNm\nN,1,,,공통직무\n", encoding="utf-8")
+    (data / "raw/api/ncs_ksa_N1.csv").write_text(
+        "compUnitName,gbnName,gbnVal\n위생관리,수행준거,조리복을 착용할 수 있다\n위생관리,지식,미생물의 분류\n", encoding="utf-8")
+    (data / "raw/api/ncs_ksa_N2.csv").write_text(
+        "compUnitName,gbnName,gbnVal\n밥조리,수행준거,쌀을 씻을 수 있다\n", encoding="utf-8")
+
+    jobcode, ncs = batch.public_reference("kitchen_helper")
+    assert jobcode == "### [J1 주방 보조원]\n주방정리와 기물세척\n### [J2 설거지원]\n식기를 세척한다"  # 없는 J9 는 건너뜀
+    assert "### [N1 공통직무]\n- [위생관리] 조리복을 착용할 수 있다" in ncs
+    assert "### [N2 ]\n- [밥조리] 쌀을 씻을 수 있다" in ncs
+    assert "미생물" not in ncs                                   # 지식·기술·태도는 제외

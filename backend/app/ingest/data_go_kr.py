@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import xml.etree.ElementTree as ET
 from collections.abc import Iterator
 
@@ -30,22 +31,32 @@ class DataGoKrClient:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         self._http = httpx.Client(timeout=timeout)
 
-    def get_xml(self, url: str, **params) -> ET.Element:
-        r = self._http.get(url, params={"serviceKey": self._key, **params})
-        r.raise_for_status()
+    def get_xml(self, url: str, retries: int = 4, **params) -> ET.Element:
+        for attempt in range(retries):
+            try:
+                r = self._http.get(url, params={"serviceKey": self._key, **params})
+                r.raise_for_status()
+                break
+            except (httpx.TransportError, httpx.HTTPStatusError) as e:
+                # 예외 메시지에 URL(키 포함)이 들어가므로 종류만 남긴다 (9.3)
+                if attempt == retries - 1:
+                    raise RuntimeError(f"data.go.kr 요청 실패: {type(e).__name__}") from None
+                time.sleep(2 * (attempt + 1))
         root = ET.fromstring(r.content)
-        code = root.findtext(".//resultCode")
-        if code and code not in ("00", "0", "000"):
-            raise RuntimeError(f"data.go.kr 오류 {code}: {ERROR_CODES.get(code, root.findtext('.//resultMsg'))}")
+        # 응답 형식이 API 마다 다르다: 표준(header/resultCode, item, totalCount) / NCS(dataInfo/code, row, totCnt)
+        code = root.findtext(".//resultCode") or root.findtext("./dataInfo/code")
+        if code and code.strip("0"):
+            msg = root.findtext(".//resultMsg") or root.findtext("./dataInfo/message")
+            raise RuntimeError(f"data.go.kr 오류 {code}: {ERROR_CODES.get(code, msg)}")
         return root
 
     def paged_items(self, url: str, rows: int = 500, **params) -> Iterator[dict[str, str]]:
         page = 1
         while True:
             root = self.get_xml(url, pageNo=page, numOfRows=rows, **params)
-            items = [{c.tag: (c.text or "") for c in it} for it in root.iter("item")]
+            items = [{c.tag: (c.text or "") for c in it} for it in [*root.iter("item"), *root.iter("row")]]
             yield from items
-            total = int(root.findtext(".//totalCount") or 0)
+            total = int(root.findtext(".//totalCount") or root.findtext(".//totCnt") or 0)
             if not items or page * rows >= total:
                 break
             page += 1
