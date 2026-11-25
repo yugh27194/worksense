@@ -250,7 +250,13 @@ def stage_check(job: str) -> None:
         source = " ".join([st["action"], *st["cautions"]])
         target = " ".join(x for x in [e["easy_text"], e.get("caution_text") or ""] if x)
         r = check(kiwi, source, target, tools=st["tools"], field_terms=terms, grade_fn=grade)
-        out[st["order"]] = [{"type": t, **p} for t, p in r.to_step_checks()]
+        rows = [{"type": t, **p} for t, p in r.to_step_checks()]
+        if e.get("easier_text"):  # 「더 쉽게」 문장도 수치·도구명 누락을 본다 (어휘는 easy_text 와 겹치므로 생략)
+            easier = " ".join(x for x in [e["easier_text"], e.get("caution_text") or ""] if x)
+            r2 = check(kiwi, source, easier, tools=st["tools"], field_terms=terms, grade_fn=grade)
+            rows += [{"type": t, "note": f"더 쉽게 문장 {p['note']}"} for t, p in r2.to_step_checks()
+                     if t != "vocab"]
+        out[st["order"]] = rows
     save_json(work_dir(job) / "checks.json", out)
     print(f"[check] 경고 있는 단계 {sum(1 for v in out.values() if v)}개")
 

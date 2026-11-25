@@ -84,6 +84,7 @@ def test_full_pipeline(data):
     assert [r["order"] for r in rows] == ["1", "2"]
     assert rows[0]["easier_text"] == "세제를 넣어요."
     assert "수치 누락: 50ml" in rows[0]["checks"]          # 5.6 자동 점검이 안내문에서 빠진 수치를 잡는다
+    assert "더 쉽게 문장 도구명 누락: 식기세척기" in rows[0]["checks"]  # 「더 쉽게」 문장도 점검한다
     assert rows[1]["needs_review"] == "True"
     assert rows[0]["photo"] == "step001.jpg" and rows[0]["clip"] == "step001.mp4"
     assert (data / "work/kitchen_helper/media/step002.mp4").exists()

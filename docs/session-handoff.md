@@ -15,7 +15,9 @@
 - `gemini-3.5-transcribe` 는 이 키로 404 → `GEMINI_MODEL_TRANSCRIBE=gemini-3.8-flash` 로 실행 (open-questions #15).
 - 전사 73문장, 업무 4개·단계 7개, 사진·클립 7쌍. `match` 는 jobs.csv 코드가 없어 건너뜀, `KRDICT_KEY` 가 없어 어휘 등급 점검도 건너뜀.
 - 사진·클립은 `data/work/kitchen_helper/media/` (git 제외) 에만 있다. 새 세션은 영상부터 다시 받아 `--from assets` 로 다시 만들어야 한다.
-- 관찰: `easy_text` 가 원문 어미만 바꾼 수준. `easier_text` 는 쉬워졌다. 단계 7개는 영상 길이(작업 장면 약 1분 15초)에 비해 적당하나 기준 답과 비교 필요.
+- 첫 실행의 `easy_text` 가 원문 어미만 바꾼 수준이라 EASY_PROMPT 를 보강(해요체 강제, 낱말 바꾸기 예, 도구 이름 유지)하고 다시 생성했다.
+  세 번 돌려 보니 해요체·쉬운 낱말은 안정적이나 `easier_text` 에서 도구 이름이 빠지는 경우가 남아, 자동 점검이 `easier_text` 도 검사하게 했다('더 쉽게 문장 …' 경고).
+- 단계 7개는 작업 장면(약 1분 15초)에 비해 적당해 보이나 기준 답과 비교 필요.
 
 ## 이어서 할 일
 
