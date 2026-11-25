@@ -146,3 +146,33 @@ def test_import_and_worker_screen(data, monkeypatch):
     assert calls[0]["task_name"] == "마감 정리"
     stats = c.get("/help/stats", headers=wp).json()
     assert stats[0]["handoff"] == 1
+
+
+def test_easy_retries_only_flagged_steps(data, monkeypatch):
+    """5.5: 수치·도구명 누락 단계만 문제를 알려 주고 다시 만들며, 나아진 결과만 받는다."""
+    from app.pipeline import gemini
+
+    batch.stage_preprocess("kitchen_helper")
+    batch.stage_transcribe("kitchen_helper")
+    batch.stage_extract("kitchen_helper")
+    calls = []
+
+    def gen(model, contents, schema, system=None):
+        calls.append(contents[0])
+        if len(calls) == 1:
+            return fake_generate(model, contents, schema)
+        return EasyTextBatch(items=[EasyTextItem(order=1, easy_text="식기세척기에 세제 50ml를 넣어요.",
+                                                 easier_text="식기세척기에 세제 50ml를 넣어요.", caution_text=None,
+                                                 source_numbers=["50ml"])])
+
+    monkeypatch.setattr(gemini, "generate_structured", gen)
+    batch.stage_easy("kitchen_helper")
+
+    # 1·2번 모두 easier_text 에 도구명이 없다 → 둘 다 다시 부름. 1번만 고쳐지므로 다음 번엔 2번만 다시 부름.
+    assert len(calls) == 1 + batch.EASY_RETRIES
+    assert "1. 식기세척기에 세제 50ml 넣기" in calls[1] and "2. 바닥 물기 닦기" in calls[1]
+    assert "easier_text 도구명 누락: 식기세척기" in calls[1]  # 문제를 프롬프트에 알려 준다
+    assert "식기세척기에 세제" not in calls[2] and "2. 바닥 물기 닦기" in calls[2]
+    items = {i["order"]: i for i in batch.load_json(data / "work/kitchen_helper/easy.json")["items"]}
+    assert items[1]["easier_text"] == "식기세척기에 세제 50ml를 넣어요."  # 나아진 결과는 받는다
+    assert items[2]["easier_text"] == "바닥을 닦아요."                    # 다시 만든 결과가 없으면 그대로

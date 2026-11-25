@@ -16,6 +16,7 @@ import argparse
 import csv
 import json
 import os
+import re
 from pathlib import Path
 
 from app.config import get_settings
@@ -197,15 +198,58 @@ def stage_match(job: str) -> None:
 # --- 5.5 쉬운 안내문 -------------------------------------------------------------
 def stage_easy(job: str) -> None:
     from app.pipeline import gemini
-    from app.schemas.llm import EASY_PROMPT, EasyTextBatch
+    from app.pipeline.easy_text_check import build_kiwi
+    from app.schemas.llm import EASY_PROMPT, EASY_RETRY_NOTE, EasyTextBatch
 
+    model = get_settings().gemini_model_text
     steps = flat_steps(job)
-    rep = gemini.generate_structured(get_settings().gemini_model_text, [EASY_PROMPT.format(steps=steps_text(steps))],
-                                     EasyTextBatch)
-    got = {i.order for i in rep.items}
-    missing = [s["order"] for s in steps if s["order"] not in got]
-    save_json(work_dir(job) / "easy.json", rep.model_dump())
-    print(f"[easy] 안내문 {len(rep.items)}개" + (f", 빠진 단계 {missing}" if missing else ""))
+    rep = gemini.generate_structured(model, [EASY_PROMPT.format(steps=steps_text(steps))], EasyTextBatch)
+    items = {i.order: i.model_dump() for i in rep.items}
+
+    # 수치·도구명 누락, 해요체가 아닌 문장이 있는 단계만 문제를 알려 주고 다시 만든다. 문제가 줄어든 경우에만 바꾼다.
+    kiwi = build_kiwi({r["term"] for r in read_csv(DATA / "curated/field_terms.csv") if r["job_key"] == job})
+    by_order = {s["order"]: s for s in steps}
+    retried = fixed = 0
+    for _ in range(EASY_RETRIES):
+        bad = {o: p for o in items if o in by_order and (p := easy_problems(kiwi, by_order[o], items[o]))}
+        if not bad:
+            break
+        retried += len(bad)
+        note = EASY_RETRY_NOTE.format(problems="\n".join(f"{o}. {' / '.join(p)}" for o, p in bad.items()))
+        again = gemini.generate_structured(
+            model, [EASY_PROMPT.format(steps=steps_text([by_order[o] for o in bad])) + note], EasyTextBatch)
+        for it in again.items:
+            new = it.model_dump()
+            if it.order in bad and len(easy_problems(kiwi, by_order[it.order], new)) < len(bad[it.order]):
+                items[it.order] = new
+                fixed += 1
+
+    missing = [s["order"] for s in steps if s["order"] not in items]
+    still = [o for o in items if o in by_order and easy_problems(kiwi, by_order[o], items[o])]
+    save_json(work_dir(job) / "easy.json", {"items": [items[o] for o in sorted(items)]})
+    print(f"[easy] 안내문 {len(items)}개, 다시 만든 단계 {retried}회·나아짐 {fixed}회, 남은 문제 단계 {still}"
+          + (f", 빠진 단계 {missing}" if missing else ""))
+
+
+EASY_RETRIES = 2
+
+
+def easy_problems(kiwi, step: dict, item: dict) -> list[str]:
+    """다시 만들 기준: 기계로 판정할 수 있는 것만 (수치·도구명 누락·추가, '~다.' 로 끝나는 문장). 어휘 등급은 제외."""
+    from app.pipeline.easy_text_check import check
+
+    source = " ".join([step["action"], *step["cautions"]])
+    caution = item.get("caution_text") or ""
+    out = []
+    for label, text in (("easy_text", item.get("easy_text", "")), ("easier_text", item.get("easier_text", ""))):
+        r = check(kiwi, source, f"{text} {caution}".strip(), tools=step["tools"], field_terms=set(),
+                  grade_fn=lambda w: "초급")
+        out += [f"{label} {n}" for n in r.missing_info + r.added_info]
+    for label, text in (("easy_text", item.get("easy_text", "")), ("easier_text", item.get("easier_text", "")),
+                        ("caution_text", caution)):
+        if any(x.rstrip(" .!?").endswith("다") for x in re.split(r"(?<=[.!?])\s+", text) if x.strip()):
+            out.append(f"{label} 해요체 아님: {text}")
+    return out
 
 
 # --- 5.6 자동 점검 ---------------------------------------------------------------
