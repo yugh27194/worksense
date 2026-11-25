@@ -1,11 +1,11 @@
-job_key,term,description
+﻿job_key,term,description
 kitchen_helper,위생모자,주방에서 머리카락이 떨어지지 않게 쓰는 모자
 kitchen_helper,고무장갑,설거지·세척 때 끼는 장갑
 kitchen_helper,밀대,바닥을 닦는 긴 자루 걸레 (밀대 걸레)
 kitchen_helper,행주,식탁·조리대를 닦는 천
 kitchen_helper,소독제,알코올 소독제
-kitchen_helper,식기세척판,식기세척기에 넣는 그릇 꽂이 판 (렉)
-kitchen_helper,렉,식기세척판의 현장 말 (rack)
+kitchen_helper,식기세척판,식기세척기에 넣는 그릇 꽂이 판 (랙)
+kitchen_helper,랙,식기세척판의 현장 말 (rack)
 kitchen_helper,식기세척기,그릇을 씻는 기계
 kitchen_helper,채반,물기를 빼는 구멍 난 바구니
 kitchen_helper,홀,손님이 식사하는 매장 공간

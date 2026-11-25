@@ -227,10 +227,13 @@ def stage_easy(job: str) -> None:
     terms = {r["term"] for r in read_csv(DATA / "curated/field_terms.csv") if r["job_key"] == job}
     kiwi = build_kiwi(terms)
     grade = make_grade_fn(job)
+    # vocab_overrides 의 hard 낱말 note(예: "'옮기다' 로 바꾸기")를 다시 만들 때 힌트로 준다
+    hints = {r["word"]: r["note"] for r in read_csv(DATA / "curated/vocab_overrides.csv")
+             if r["action"] == "hard" and r.get("note")}
     by_order = {s["order"]: s for s in steps}
 
     def problems(o: int, item: dict) -> list[str]:
-        return easy_problems(kiwi, by_order[o], item, grade_fn=grade, field_terms=terms)
+        return easy_problems(kiwi, by_order[o], item, grade_fn=grade, field_terms=terms, hints=hints)
 
     retried = fixed = 0
     for _ in range(EASY_RETRIES):
@@ -254,10 +257,20 @@ def stage_easy(job: str) -> None:
           + (f", 빠진 단계 {missing}" if missing else ""))
 
 
-EASY_RETRIES = 2
+EASY_RETRIES = 3
 
 
-def easy_problems(kiwi, step: dict, item: dict, grade_fn=None, field_terms: set[str] | None = None) -> list[str]:
+def tool_words(tools: list[str]) -> set[str]:
+    """도구 이름과 그 덩어리(괄호·띄어쓰기로 나뉜 부분). '식기세척판(렉)' → {식기세척판(렉), 식기세척판, 렉}.
+    이 낱말은 글자 그대로 써야 하므로 어려운 낱말로 바꾸라고 하지 않는다. '식기' 처럼 일부만 따로 쓴 말은 해당 없음."""
+    out = set(tools)
+    for t in tools:
+        out.update(re.findall(r"[가-힣A-Za-z0-9]+", t))
+    return out
+
+
+def easy_problems(kiwi, step: dict, item: dict, grade_fn=None, field_terms: set[str] | None = None,
+                  hints: dict[str, str] | None = None) -> list[str]:
     """다시 만들 기준: 기계로 판정할 수 있는 것만.
     수치·도구명 누락·추가, '~다.' 로 끝나는 문장, 어려운 낱말(grade_fn 을 줄 때. 현장 용어·도구 이름 속 낱말은 제외)."""
     from app.pipeline.easy_text_check import check, conjugation_errors
@@ -271,8 +284,8 @@ def easy_problems(kiwi, step: dict, item: dict, grade_fn=None, field_terms: set[
                   grade_fn=grade_fn or (lambda w: "초급"))
         out += [f"{label} {n}" for n in r.missing_info + r.added_info]
         # 도구 이름은 글자 그대로 쓰라고 했으므로, 도구 이름에 든 낱말은 바꾸라고 하지 않는다
-        out += [f"{label} 어려운 낱말: {w}({g or '등급 없음'})" for w, g in r.hard_words
-                if not any(w in t for t in step["tools"])]
+        out += [f"{label} 어려운 낱말: {w}({g or '등급 없음'})" + (f" → {hints[w]}" if hints and w in hints else "")
+                for w, g in r.hard_words if w not in tool_words(step["tools"])]
     for label, text in (("easy_text", item.get("easy_text", "")), ("easier_text", item.get("easier_text", "")),
                         ("caution_text", caution)):
         if any(x.rstrip(" .!?").endswith("다") for x in re.split(r"(?<=[.!?])\s+", text) if x.strip()):
@@ -330,7 +343,7 @@ def stage_check(job: str) -> None:
         r = check(kiwi, source, target, tools=st["tools"], field_terms=terms, grade_fn=grade)
         # 도구 이름 속 낱말(예: 식기세척기의 '세척')은 바꾸라고 할 수 없으므로 경고하지 않는다 (easy_problems 와 같음)
         rows = [{"type": t, **p} for t, p in r.to_step_checks()
-                if not (t == "vocab" and any(p["word"] in tool for tool in st["tools"]))]
+                if not (t == "vocab" and p["word"] in tool_words(st["tools"]))]
         if e.get("easier_text"):  # 「더 쉽게」 문장도 수치·도구명 누락을 본다 (어휘는 easy_text 와 겹치므로 생략)
             easier = " ".join(x for x in [e["easier_text"], e.get("caution_text") or ""] if x)
             r2 = check(kiwi, source, easier, tools=st["tools"], field_terms=terms, grade_fn=grade)

@@ -1,4 +1,4 @@
-word,action,note
+﻿word,action,note
 마스크,ignore,일상어 (사전 중급)
 앞치마,ignore,일상어 (사전 중급)
 걸레,ignore,일상어 (사전 중급)
@@ -6,11 +6,11 @@ word,action,note
 껍질,ignore,일상어 (사전 중급)
 벗기다,ignore,일상어 (사전 중급)
 바구니,ignore,일상어 (사전 중급)
-다듬다,ignore,주방 일상어 (사전 중급)
+다듬다,hard,다른 쉬운 말로 바꾸기
 담다,ignore,일상어 (사전 중급)
 꽂다,ignore,일상어 (사전 중급)
 깨지다,ignore,일상어 (사전 중급)
-치우다,ignore,일상어 (사전 중급)
+치우다,hard,'옮기다' 로 바꾸기
 주방,ignore,일터 이름이라 그대로 씀 (사전 중급)
 알코올,ignore,소독제 이름의 일부 (사전 중급)
 위생,hard,'깨끗하게' 등으로 풀어 쓰기 (사전 고급)
@@ -18,3 +18,6 @@ word,action,note
 세척,hard,'씻기' 로 바꾸기 (사전 중급)
 매장,hard,'가게' 로 바꾸기 (사전 중급)
 음식물,hard,'음식' 으로 바꾸기 (사전 중급)
+대접,hard,다른 쉬운 말로 바꾸기
+뿌리다,ignore,일상어 (사전 중급)
+버튼,hard,다른 쉬운 말로 바꾸기

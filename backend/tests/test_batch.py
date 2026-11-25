@@ -203,7 +203,7 @@ def test_easy_retries_hard_words(data, monkeypatch):
     """5.5: 어려운 낱말(vocab_overrides hard)도 다시 만들 기준. 도구 이름 속 낱말은 바꾸라고 하지 않는다."""
     from app.pipeline import gemini
 
-    (data / "curated/vocab_overrides.csv").write_text("word,action,note\n세제,hard,\n밀대,hard,\n", encoding="utf-8")
+    (data / "curated/vocab_overrides.csv").write_text("word,action,note\n세제,hard,비누로\n밀대,hard,\n", encoding="utf-8")
     batch.stage_preprocess("kitchen_helper")
     batch.stage_transcribe("kitchen_helper")
     batch.stage_extract("kitchen_helper")
@@ -227,6 +227,7 @@ def test_easy_retries_hard_words(data, monkeypatch):
 
     assert len(calls) == 2
     assert "easy_text 어려운 낱말: 세제(고급)" in calls[1]
+    assert "세제(고급) → 비누로" in calls[1]                 # vocab_overrides note 를 힌트로 준다
     assert "밀대" not in calls[1]                      # 2번은 '밀대' 가 도구 이름이라 다시 만들지 않음
     items = {i["order"]: i for i in batch.load_json(data / "work/kitchen_helper/easy.json")["items"]}
     assert items[1]["easy_text"] == "식기세척기에 비누 50ml를 넣어요."
